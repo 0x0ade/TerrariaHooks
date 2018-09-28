@@ -68,9 +68,9 @@
       <Project>{fb9ed388-b9e7-4786-a2b5-04790a34dd37}</Project>
       <Name>Stripper</Name>
     </ProjectReference>
-    <ProjectReference Include="..\TerrariaHooksMod\TerrariaHooksMod.csproj">
+    <ProjectReference Include="..\TerrariaHooks\TerrariaHooks.csproj">
       <Project>{0ddc1049-13ab-463d-91a9-ef4e56bff5af}</Project>
-      <Name>TerrariaHooksMod</Name>
+      <Name>TerrariaHooks</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

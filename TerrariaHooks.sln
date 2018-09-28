@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod.RuntimeDetour.HookG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMod", "MonoMod\MonoMod\MonoMod.csproj", "{8A17C958-5C33-4035-AF76-F94A3AA2DC4F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerrariaHooksMod", "TerrariaHooksMod\TerrariaHooksMod.csproj", "{0DDC1049-13AB-463D-91A9-EF4E56BFF5AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TerrariaHooks", "TerrariaHooks\TerrariaHooks.csproj", "{0DDC1049-13AB-463D-91A9-EF4E56BFF5AF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

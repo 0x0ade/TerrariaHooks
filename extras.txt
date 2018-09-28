@@ -1,4 +1,4 @@
-﻿MonoMod.exe
+﻿TerrariaHooks.dll
+MonoMod.exe
 MonoMod.RuntimeDetour.dll
 MonoMod.Utils.dll
-TerrariaHooksMod.dll

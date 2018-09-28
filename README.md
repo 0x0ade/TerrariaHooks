@@ -62,7 +62,8 @@ Note that this requires you to undo your detours on unload.
 	- The files redistributed in this repo are stripped.
 	- The files in that directory will be stripped automatically on each run.
 - Build the solution.
-- Run `./TerrariaHookGen/bin/Debug/TerrariaHookGen.exe _input extras.txt _output`
+- Run `./TerrariaHookGen/bin/Debug/TerrariaHookGen.exe _input extras.txt .`
+- In the Terraria directory, run `./tModLoaderServer.exe -build 'path/to/TerrariaHooks' -eac`
 
 This repository overcomplicates the entire procedure. It boils down to:
 ```bash
