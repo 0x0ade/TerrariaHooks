@@ -6,15 +6,22 @@
 
 HookGen "recipe" for Terraria, resulting in a TML mod that other mods can depend on.
 
-Using [MonoMod](https://github.com/0x0ade/MonoMod), an open-source C# modding utility.
+Built with [MonoMod](https://github.com/0x0ade/MonoMod).
 
-**Players:** This mod is needed by other mods. Just install it, it doesn't change Terraria on its own.
+## Using TerrariaHooks
 
-**Modders:** Please read the MonoMod RuntimeDetour README, which also explains HookGen:
-https://github.com/0x0ade/MonoMod/blob/master/README-RuntimeDetour.md
-
+- Download `TerrariaHooks.dll` from the latest release.
+- Put it into your mod `lib` folder.
+- Add it as a reference in Visual Studio.
+- In your `build.txt`, add `modReferences = TerrariaHooks`
 
 ## Features
+
+### For Players
+
+This mod is a helper for other mods. Just install it if a mod needs it, it won't change Terraria on its own.
+
+### For Modders
 
 - "Hook" any arbitrary method you want easily:
 ```cs
@@ -45,16 +52,10 @@ Special thanks to Chicken-Bones for the great ideas and feedback along the way!
 - Use RuntimeDetour to quickly port your existing "method swapping" code.  
 Note that this requires you to undo your detours on unload.
 
-## Instructions
+If you need more info, read the MonoMod RuntimeDetour README:
+https://github.com/0x0ade/MonoMod/blob/master/README-RuntimeDetour.md
 
-### Integrating TerrariaHooks
-
-```cs
-// TODO: Figure out how to add a strong dependency with per-platform .dlls
-// TODO: Write this section.
-```
-
-### Custom TerrariaHooks.*.dll
+## Building TerrariaHooks
 
 - `git clone --recursive https://github.com/0x0ade/TerrariaHookGen.git`
     - Alternatively, pull in the MonoMod submodule manually
