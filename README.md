@@ -1,4 +1,4 @@
-# TerrariaHookGen
+# TerrariaHooks
 
 ### License: MIT
 
@@ -8,12 +8,14 @@ HookGen "recipe" for Terraria, resulting in a TML mod that other mods can depend
 
 Built with [MonoMod](https://github.com/0x0ade/MonoMod).
 
-## Using TerrariaHooks
+## Instructions
 
-- Download `TerrariaHooks.dll` from the latest release.
+- Download `TerrariaHooks.dll` from the [latest release](https://github.com/0x0ade/TerrariaHooks/releases).
 - Put it into your mod `lib` folder.
 - Add it as a reference in Visual Studio.
 - In your `build.txt`, add `modReferences = TerrariaHooks`
+- Add your hooks in your mod `Load` method.
+- TerrariaHooks will automatically undo your hook when your mod unloads.
 
 ## Features
 
