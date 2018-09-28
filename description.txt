@@ -1,20 +1,20 @@
-﻿TerrariaHooks: The power of HookGen in the palm of your hands.
-‍
-Players: This mod is needed by other mods. Just install it, it doesn't change Terraria on its own.
-‍
-Modders: Please read the MonoMod RuntimeDetour README, which also explains HookGen:
-https://github.com/0x0ade/MonoMod/blob/master/README-RuntimeDetour.md
-‍
-The main features of TerrariaHooks:
-‍
-- "Hook" any arbitrary method you want easily:
+﻿[i:109] TerrariaHooks
+The power of HookGen in the palm of your hands.
+
+[i:109] Note
+This mod only "works" together with other mods that need it.
+Please visit the homepage to the up-to-date feature list and more information.
+
+[i:109] Features
+
+[i:75] "Hook" any arbitrary method you want easily:
 On.Terraria.Player.CheckMana += (...) => {...}
-‍
-- Use "hooks" to detect when a method runs, change how it runs or even replace it.
+
+[i:75] Use "hooks" to detect when a method runs, change how it runs or even replace it.
 "Hooks" are automatically undone whenever your mod unloads. This is handled by TerrariaHooks for you.
-‍
-- Manipulate any method at runtime via IL... += (...) => {...} using Cecil and many helpers.
-Special thanks to Chicken-Bones for the great ideas and feedback along the way!
-‍
-- Use RuntimeDetour to quickly port your existing "method swapping" code.
+
+[i:75] Manipulate any method at runtime via IL... += (...) => {...}
+Special thanks to Chicken-Bones for the great discussions!
+
+[i:75] Use RuntimeDetour to quickly port your existing "method swapping" code.
 Note that this requires you to undo your detours on unload.
