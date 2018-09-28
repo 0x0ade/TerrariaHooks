@@ -1,0 +1,3 @@
+﻿MonoMod.exe
+MonoMod.RuntimeDetour.dll
+MonoMod.Utils.dll
