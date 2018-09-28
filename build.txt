@@ -3,5 +3,6 @@ author = 0x0ade
 version = 0.0
 noCompile = true
 homepage = https://github.com/0x0ade/TerrariaHookGen
-buildIgnore = .git, .vs, __input, _input, _output, MonoMod, Stripper, TerrariaHookGen, TerrariaHooksMod, .gitattributes, .gitignore, .gitmodules, build.txt, extras.txt, ILRepack.exe, LICENSE, README.md
+buildIgnore = .git*, .vs*, __input*, _input*, MonoMod*, Stripper*, TerrariaHookGen*, TerrariaHooksMod*, .gitattributes*, .gitignore*, .gitmodules*, build.txt*, extras.txt*, ILRepack.exe*, LICENSE*, README.md*
+includeSource = false
 includePDB = true
