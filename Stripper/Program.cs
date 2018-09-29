@@ -33,22 +33,30 @@ namespace TerrariaHookGen {
             }
 
             ModuleDefinition module = ModuleDefinition.ReadModule(path, readerParams);
+            int changes = 0;
 
-            module.Resources.Clear();
+            if ((module.Resources?.Count ?? 0) != 0) {
+                changes += module.Resources.Count;
+                module.Resources.Clear();
+            }
 
             foreach (TypeDefinition type in module.Types)
-                Strip(type);
+                Strip(ref changes, type);
 
-            module.Write(path);
+            if (changes != 0) {
+                module.Write(path);
+            }
         }
 
-        static void Strip(TypeDefinition type) {
+        static void Strip(ref int changes, TypeDefinition type) {
             foreach (MethodDefinition method in type.Methods)
-                if (method.HasBody)
+                if (method.HasBody && method.Body.Instructions.Count != 0) {
+                    changes++;
                     method.Body = new MethodBody(method);
+                }
 
             foreach (TypeDefinition nested in type.NestedTypes)
-                Strip(nested);
+                Strip(ref changes, nested);
         }
 
     }
