@@ -1,6 +1,6 @@
 displayName = TerrariaHooks
 author = 0x0ade
-version = 0.3
+version = 0.4
 noCompile = true
 homepage = https://github.com/0x0ade/TerrariaHookGen
 buildIgnore = .git*, .vs*, __input*, _input*, MonoMod*, Stripper*, TerrariaHookGen*, TerrariaHooks*, .gitattributes*, .gitignore*, .gitmodules*, build.txt*, extras.txt*, ILRepack.exe*, LICENSE*, README.md*
