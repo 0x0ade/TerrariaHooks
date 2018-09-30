@@ -3,15 +3,17 @@ using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.HookGen;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Terraria;
 using Terraria.ModLoader;
 
 namespace TerrariaHooks {
-    class TerrariaHooksConfig {
+    abstract class MethodSwapUpgrader {
 
-        public bool UpgradeTerrariaOverhaulTMP { get; set; } = false;
+        public abstract void Load(Mod mod, bool late);
+        public abstract void Unload(Mod mod);
 
     }
 }

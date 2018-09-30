@@ -41,14 +41,20 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MethodSwapUpgraders\TerrariaOverhaulUpgrader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TerrariaHooksConfig.cs" />
     <Compile Include="TerrariaHooksMod.cs" />
+    <Compile Include="MethodSwapUpgrader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonoMod\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
       <Project>{d0c584c0-81d7-486e-b70e-d7f9256e0909}</Project>
       <Name>MonoMod.RuntimeDetour</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\MonoMod\MonoMod.Utils\MonoMod.Utils.csproj">
+      <Project>{1839cfe2-3db0-45a8-b03d-9aa797479a3a}</Project>
+      <Name>MonoMod.Utils</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
