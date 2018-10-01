@@ -32,7 +32,7 @@ namespace TerrariaHooks.ServerWrapper {
             };
 
             // Hook the server's compilation method to support TerrariaHooks.Windows.dll and TerrariaHooks.Mono.dll
-            ModCompilerHook.Hook(asm);
+            ModCompilerHook.Init(asm);
 
             // Run the server.
             asm.EntryPoint.Invoke(null, new object[] { args });

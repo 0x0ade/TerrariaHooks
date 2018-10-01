@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace TerrariaHooks {
     // This code is shared between TerrariaHooks and the server wrapper.
-    // It this can't use HookIL to inject anyting inside of CompileMod...
+    // It thus can't use HookIL to inject anyting inside of CompileMod...
     static class ModCompilerHook {
 
         public static bool Hooked {
@@ -18,7 +18,7 @@ namespace TerrariaHooks {
             private set => AppDomain.CurrentDomain.SetData("TerrariaHooks.ModCompilerHook.Hooked", value);
         }
 
-        public static void Hook(Assembly asm) {
+        public static void Init(Assembly asm) {
             if (Hooked)
                 return;
             Hooked = true;
@@ -33,15 +33,13 @@ namespace TerrariaHooks {
             );
         }
 
-        public static void Unhook() {
+        public static void Dispose() {
             if (!Hooked)
                 return;
             Hooked = false;
 
-            HookOnCompileMod?.Dispose();
-            HookOnCompileMod = null;
-            HookOnRoslynCompile?.Dispose();
-            HookOnRoslynCompile = null;
+            HookOnCompileMod.Dispose();
+            HookOnRoslynCompile.Dispose();
         }
 
         static bool CompilingForWindows;
