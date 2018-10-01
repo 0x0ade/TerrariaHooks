@@ -11,52 +11,18 @@ using System.Linq;
 using System.Reflection;
 using Terraria;
 using Terraria.ModLoader;
-using TerrariaHooks.MethodSwapUpgraders;
 
 namespace TerrariaHooks {
     class TerrariaHooksMod : Mod {
-
-        readonly static Dictionary<string, MethodSwapUpgrader> Upgraders = new Dictionary<string, MethodSwapUpgrader>();
-
-        static TerrariaHooksConfig Config;
 
         public TerrariaHooksMod() {
             Properties = new ModProperties() {
             };
 
-            // Load the configuration.
-            string configPath = Path.Combine(Main.SavePath, "Mod Configs", "TerrariaHooks.json");
-            if (System.IO.File.Exists(configPath)) {
-                try {
-                    Config = JsonConvert.DeserializeObject<TerrariaHooksConfig>(System.IO.File.ReadAllText(configPath));
-                } catch {
-                }
-            }
-            if (Config == null) {
-                Config = new TerrariaHooksConfig();
-                string configDirPath = Path.GetDirectoryName(configPath);
-                if (!Directory.Exists(configDirPath));
-                    Directory.CreateDirectory(configDirPath);
-            }
-            if (System.IO.File.Exists(configPath))
-                System.IO.File.Delete(configPath);
-            System.IO.File.WriteAllText(configPath, JsonConvert.SerializeObject(Config));
-
-            // Set up any upgraders.
-
-            if (Config.UpgradeTerrariaOverhaul)
-                Upgraders["TerrariaOverhaul"] = new TerrariaOverhaulUpgrader();
-
             // Load the cecil module generator.
             HookEndpointManager.OnGenerateCecilModule += GenerateCecilModule;
 
             // All of our loader hooks need to be applied as early as possible.
-
-            // TerrariaHooks is responsible for "upgrading" a few mods with custom method swapping code.
-            HookOnAutoload = new Hook(
-                typeof(Mod).GetMethod("Autoload", BindingFlags.NonPublic | BindingFlags.Instance),
-                typeof(TerrariaHooksMod).GetMethod("OnAutoload", BindingFlags.NonPublic | BindingFlags.Static)
-            );
 
             // Some mods might forget to undo their hooks.
             HookOnUnloadContent = new Hook(
@@ -126,24 +92,9 @@ namespace TerrariaHooks {
             return name;
         }
 
-        private static void Upgrade(Mod mod, bool late) {
-            if (Upgraders.TryGetValue(mod.Name, out MethodSwapUpgrader upgrader))
-                upgrader.Load(mod, late);
-        }
-
-        static Hook HookOnAutoload;
-        static void OnAutoload(Action<Mod> orig, Mod mod) {
-            Upgrade(mod, false);
-            orig(mod);
-        }
-
         static Hook HookOnUnloadContent;
         static void OnUnloadContent(Action<Mod> orig, Mod mod) {
             orig(mod);
-
-            // Undo any upgrades performed by TerrariaHooks.
-            if (Upgraders.TryGetValue(mod.Name, out MethodSwapUpgrader upgrader))
-                upgrader.Unload(mod);
 
             // Unload any HookGen hooks after unloading the mod.
             HookEndpointManager.RemoveAllOwnedBy(mod.Code);
@@ -153,13 +104,10 @@ namespace TerrariaHooks {
         static void OnUnloadAll(Action orig) {
             orig();
 
-            HookOnAutoload.Dispose();
             HookOnUnloadContent.Dispose();
             HookOnUnloadAll.Dispose();
 
             HookEndpointManager.OnGenerateCecilModule += GenerateCecilModule;
-
-            Upgraders.Clear();
         }
 
     }

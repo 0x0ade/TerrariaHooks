@@ -41,11 +41,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MethodSwapUpgraders\TerrariaOverhaulUpgrader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TerrariaHooksConfig.cs" />
     <Compile Include="TerrariaHooksMod.cs" />
-    <Compile Include="MethodSwapUpgrader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonoMod\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
