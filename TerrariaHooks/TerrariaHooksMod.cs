@@ -24,6 +24,8 @@ namespace TerrariaHooks {
 
             // All of our loader hooks need to be applied as early as possible.
 
+            ModCompilerHook.Hook(typeof(Mod).Assembly);
+
             // Some mods might forget to undo their hooks.
             HookOnUnloadContent = new Hook(
                 typeof(Mod).GetMethod("UnloadContent", BindingFlags.NonPublic | BindingFlags.Instance),
@@ -35,10 +37,6 @@ namespace TerrariaHooks {
                 typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static),
                 typeof(TerrariaHooksMod).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
             );
-        }
-
-        public override void Load() {
-            // Autoload is patched before any mod.Load can run.
         }
 
         private static ModuleDefinition GenerateCecilModule(AssemblyName name) {

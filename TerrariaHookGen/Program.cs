@@ -19,12 +19,11 @@ namespace TerrariaHookGen {
             if (!File.Exists("MonoMod.RuntimeDetour.dll"))
                 Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-            string inputDir, extraTxt, outputDir;
-            if (args.Length != 3 ||
+            string inputDir, outputDir;
+            if (args.Length != 2 ||
                 !Directory.Exists(inputDir = args[0]) ||
-                !File.Exists(extraTxt = args[1]) ||
-                !Directory.Exists(outputDir = args[2])) {
-                Console.Error.WriteLine("Usage: inputdir extras.txt outputdir");
+                !Directory.Exists(outputDir = args[1])) {
+                Console.Error.WriteLine("Usage: inputdir outputdir");
                 return;
             }
 
@@ -53,11 +52,21 @@ namespace TerrariaHookGen {
             GenHooks(inputFNA, hooksFNA);
 
             // Merge generated .dlls and MonoMod into one .dll per environment.
-            string[] extraFiles = File.ReadAllLines(extraTxt);
-            Repack(hooksXNA, extraFiles, Path.Combine(outputDir, "Windows.dll"));
+            string[] extrasMod = {
+                "TerrariaHooks.dll",
+                "MonoMod.exe",
+                "MonoMod.RuntimeDetour.dll",
+                "MonoMod.Utils.dll"
+            };
+            Repack(hooksXNA, extrasMod, Path.Combine(outputDir, "Windows.dll"), "TerrariaHooks.dll");
             File.Delete(hooksXNA);
-            Repack(hooksFNA, extraFiles, Path.Combine(outputDir, "Mono.dll"));
+            Repack(hooksFNA, extrasMod, Path.Combine(outputDir, "Mono.dll"), "TerrariaHooks.dll");
             File.Delete(hooksFNA);
+
+            Repack("tModLoaderServer_TerrariaHooks.exe", new string[] {
+                "MonoMod.RuntimeDetour.dll",
+                "MonoMod.Utils.dll"
+            }, Path.Combine(outputDir, "tModLoaderServer_TerrariaHooks.exe"));
         }
 
         static bool VerifyFile(out string path, params string[] paths) {
@@ -93,27 +102,31 @@ namespace TerrariaHookGen {
             }
         }
 
-        static void Repack(string input, string[] extras, string output) {
+        static void Repack(string input, string[] extras, string output, string name = null) {
             Console.Error.WriteLine($"Repacking: {input} -> {output}");
+            if (name == null)
+                name = Path.GetFileName(output);
 
-            string outputTmp = Path.Combine(Path.GetDirectoryName(output), "TerrariaHooks.dll");
+            string outputTmp = Path.Combine(Path.GetDirectoryName(output), name);
             if (File.Exists(outputTmp))
                 File.Delete(outputTmp);
 
             List<string> args = new List<string>();
             args.Add($"/out:{outputTmp}");
+            args.Add(input);
             foreach (string dep in extras)
                 if (!string.IsNullOrWhiteSpace(dep))
                     args.Add(dep.Trim());
-            args.Add(input);
 
             RepackOptions options = new RepackOptions(args);
             ILRepack repack = new ILRepack(options);
             repack.Repack();
 
-            if (File.Exists(output))
-                File.Delete(output);
-            File.Move(outputTmp, output);
+            if (output != outputTmp) {
+                if (File.Exists(output))
+                    File.Delete(output);
+                File.Move(outputTmp, output);
+            }
         }
 
     }

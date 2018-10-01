@@ -66,7 +66,7 @@ If you need more info, read the [MonoMod RuntimeDetour README](https://github.co
 	- The files redistributed in this repo are stripped.
 	- The files in that directory will be stripped automatically on each run.
 - Build the solution.
-- Run `./TerrariaHookGen/bin/Debug/TerrariaHookGen.exe _input extras.txt .`
+- Run `./TerrariaHookGen/bin/Debug/TerrariaHookGen.exe _input .`
 - In the Terraria directory, run `./tModLoaderServer.exe -build 'path/to/TerrariaHooks' -eac`
 
 This repository overcomplicates the entire procedure. It boils down to:

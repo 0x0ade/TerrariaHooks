@@ -72,16 +72,15 @@
       <Project>{0ddc1049-13ab-463d-91a9-ef4e56bff5af}</Project>
       <Name>TerrariaHooks</Name>
     </ProjectReference>
+    <ProjectReference Include="..\tModLoaderServer_TerrariaHooks\tModLoaderServer_TerrariaHooks.csproj">
+      <Project>{bbc47cd4-e931-4df8-84e2-35e7453153bd}</Project>
+      <Name>tModLoaderServer_TerrariaHooks</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
       <Version>0.9.6</Version>
     </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\extras.txt">
-      <Link>extras.txt</Link>
-    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
