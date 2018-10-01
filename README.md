@@ -45,6 +45,8 @@ On.Terraria.Player.CheckMana += (orig, player, amount, pay, blockQuickMana) => {
 }
 ```
 
+For an extended example, take a look at [this gist](https://gist.github.com/0x0ade/1d1013d6ae1ff450aa76f252b0f3b62c).
+
 - Use "hooks" to detect when a method runs, change how it runs or even replace it.  
 "Hooks" are automatically undone whenever your mod unloads. This is handled by TerrariaHooks for you.
 
@@ -54,8 +56,7 @@ Special thanks to Chicken-Bones for the great ideas and feedback along the way!
 - Use RuntimeDetour to quickly port your existing "method swapping" code.  
 Note that this requires you to undo your detours on unload.
 
-If you need more info, read the MonoMod RuntimeDetour README:
-https://github.com/0x0ade/MonoMod/blob/master/README-RuntimeDetour.md
+If you need more info, read the [MonoMod RuntimeDetour README](https://github.com/0x0ade/MonoMod/blob/master/README-RuntimeDetour.md).
 
 ## Building TerrariaHooks
 

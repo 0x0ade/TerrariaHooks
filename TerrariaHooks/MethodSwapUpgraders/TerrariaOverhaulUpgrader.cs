@@ -105,7 +105,27 @@ namespace TerrariaHooks.MethodSwapUpgraders {
                 to = t_MethodSwapping.GetMethod(injection, MethodFlags, null, parameters, null);
             }
 
-            Swaps.Add(new Detour(from, to));
+            Detour detour = new Detour(from, to);
+            Swaps.Add(detour);
+
+            // Method swaps use a janky method to invoke the original method.
+            // Patch them to use the orig trampoline instead, hooking them up into the RuntimeDetour detour chain.
+            MethodBase trampoline = detour.GenerateTrampoline();
+            using (DynamicMethodDefinition dmd = new DynamicMethodDefinition(to, HookEndpointManager.GenerateCecilModule)) {
+                new HookIL(dmd.Definition).Invoke(il => {
+                    HookILCursor c = il.At(0);
+
+                    // Replace any call*s to the "from" method to a call to the trampoline.
+                    while (c.GotoNext(
+                        i => i.MatchCall(from) || i.MatchCallvirt(from)
+                    )) {
+                        c.Remove();
+                        c.Emit(OpCodes.Call, trampoline);
+                    }
+                });
+
+                Upgrades.Add(new Detour(dmd.Method, dmd.Generate()));
+            }
 
             Log($"Swapped {type.Name}.{original} with {t_MethodSwapping.Name}.{injection} using RuntimeDetour");
         }

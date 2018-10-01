@@ -11,7 +11,7 @@ using Terraria.ModLoader;
 namespace TerrariaHooks {
     class TerrariaHooksConfig {
 
-        public bool UpgradeTerrariaOverhaulTMP { get; set; } = false;
+        public bool UpgradeTerrariaOverhaul { get; set; } = false;
 
     }
 }

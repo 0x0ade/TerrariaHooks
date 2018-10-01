@@ -25,9 +25,7 @@ namespace TerrariaHooks {
             };
 
             // Load the configuration.
-
             string configPath = Path.Combine(Main.SavePath, "Mod Configs", "TerrariaHooks.json");
-
             if (System.IO.File.Exists(configPath)) {
                 try {
                     Config = JsonConvert.DeserializeObject<TerrariaHooksConfig>(System.IO.File.ReadAllText(configPath));
@@ -39,10 +37,10 @@ namespace TerrariaHooks {
                 string configDirPath = Path.GetDirectoryName(configPath);
                 if (!Directory.Exists(configDirPath));
                     Directory.CreateDirectory(configDirPath);
-                if (System.IO.File.Exists(configPath))
-                    System.IO.File.Delete(configPath);
-                System.IO.File.WriteAllText(configPath, JsonConvert.SerializeObject(Config));
             }
+            if (System.IO.File.Exists(configPath))
+                System.IO.File.Delete(configPath);
+            System.IO.File.WriteAllText(configPath, JsonConvert.SerializeObject(Config));
 
             // Set up any upgraders.
 
