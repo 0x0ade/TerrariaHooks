@@ -26,6 +26,11 @@ public static class TerrariaHooksContext {
     static Func<object, MethodBase, MethodBase, bool> OnRemoteDetour;
     static Func<object, bool> OnRemoteUndo;
     static Func<object, MethodBase, MethodBase> OnRemoteGenerateTrampoline;
+    static Func<MethodBase, Delegate, bool> OnRemoteAdd;
+    static Func<MethodBase, Delegate, bool> OnRemoteRemove;
+    static Func<MethodBase, Delegate, bool> OnRemoteModify;
+    static Func<MethodBase, Delegate, bool> OnRemoteUnmodify;
+    static Func<object, bool> OnRemoteRemoveAllOwnedBy;
 
     static readonly HashSet<Mod> Mods = new HashSet<Mod>();
     static bool Initialized = false;
@@ -40,6 +45,7 @@ public static class TerrariaHooksContext {
             return;
         Initialized = true;
         IsFirstAutoload = true;
+        IsOutdated = false;
 
         if (mod is TerrariaHooksMod)
             IsInstalled = true;
@@ -83,6 +89,11 @@ public static class TerrariaHooksContext {
             Detour.OnDetour -= OnRemoteDetour;
             Detour.OnUndo -= OnRemoteUndo;
             Detour.OnGenerateTrampoline -= OnRemoteGenerateTrampoline;
+            HookEndpointManager.OnAdd -= OnRemoteAdd;
+            HookEndpointManager.OnRemove -= OnRemoteRemove;
+            HookEndpointManager.OnModify -= OnRemoteModify;
+            HookEndpointManager.OnUnmodify -= OnRemoteUnmodify;
+            HookEndpointManager.OnRemoveAllOwnedBy -= OnRemoteRemoveAllOwnedBy;
         }
     }
 
@@ -90,7 +101,12 @@ public static class TerrariaHooksContext {
         Assembly newestAsm,
         Func<object, MethodBase, MethodBase, bool> onRemoteDetour,
         Func<object, bool> onRemoteUndo,
-        Func<object, MethodBase, MethodBase> onRemoteGenerateTrampoline
+        Func<object, MethodBase, MethodBase> onRemoteGenerateTrampoline,
+        Func<MethodBase, Delegate, bool> onRemoteAdd,
+        Func<MethodBase, Delegate, bool> onRemoteRemove,
+        Func<MethodBase, Delegate, bool> onRemoteModify,
+        Func<MethodBase, Delegate, bool> onRemoteUnmodify,
+        Func<object, bool> onRemoteRemoveAllOwnedBy
     ) {
         Assembly selfAsm = Assembly.GetExecutingAssembly();
         IsOutdated = true;
@@ -108,6 +124,11 @@ public static class TerrariaHooksContext {
         Detour.OnDetour += OnRemoteDetour = onRemoteDetour;
         Detour.OnUndo += OnRemoteUndo = onRemoteUndo;
         Detour.OnGenerateTrampoline += OnRemoteGenerateTrampoline = onRemoteGenerateTrampoline;
+        HookEndpointManager.OnAdd += OnRemoteAdd = onRemoteAdd;
+        HookEndpointManager.OnRemove += OnRemoteRemove = onRemoteRemove;
+        HookEndpointManager.OnModify += OnRemoteModify = onRemoteModify;
+        HookEndpointManager.OnUnmodify += OnRemoteUnmodify = onRemoteUnmodify;
+        HookEndpointManager.OnRemoveAllOwnedBy += OnRemoteRemoveAllOwnedBy = onRemoteRemoveAllOwnedBy;
     }
 
     static readonly Dictionary<object, Detour> RemoteDetours = new Dictionary<object, Detour>();
@@ -117,55 +138,78 @@ public static class TerrariaHooksContext {
     };
     static readonly Func<object, bool> OnLocalUndo = (remote) => {
         RemoteDetours[remote].Undo();
+        RemoteDetours.Remove(remote);
         return false;
     };
     static readonly Func<object, MethodBase, MethodBase> OnLocalGenerateTrampoline = (remote, signature) => {
         return RemoteDetours[remote].GenerateTrampoline(signature);
     };
+    static readonly Func<MethodBase, Delegate, bool> OnLocalAdd = (method, hookDelegate) => {
+        HookEndpointManager.Add(method, hookDelegate);
+        return false;
+    };
+    static readonly Func<MethodBase, Delegate, bool> OnLocalRemove = (method, hookDelegate) => {
+        HookEndpointManager.Remove(method, hookDelegate);
+        return false;
+    };
+    static readonly Func<MethodBase, Delegate, bool> OnLocalModify = (method, callback) => {
+        HookEndpointManager.Modify(method, callback);
+        return false;
+    };
+    static readonly Func<MethodBase, Delegate, bool> OnLocalUnmodify = (method, callback) => {
+        HookEndpointManager.Unmodify(method, callback);
+        return false;
+    };
+    static readonly Func<object, bool> OnLocalRemoveAllOwnedBy = (owner) => {
+        HookEndpointManager.RemoveAllOwnedBy(owner);
+        return false;
+    };
 
     static Hook HookOnAutoload;
     static void OnAutoload(Action<Mod> orig, Mod mod) {
-        if (IsOutdated) {
-            // We're already a slave.
-            orig(mod);
-            return;
-        }
-
         if (IsFirstAutoload) {
-            // The first autoload in this context. Let's check if this is the newest version.
-            Assembly selfAsm = Assembly.GetExecutingAssembly();
-            Version selfVer = selfAsm.GetName().Version;
-            List<Assembly> olderAsm = new List<Assembly>();
-            Assembly newestAsm = selfAsm;
-            Version newestVer = selfVer;
+            IsFirstAutoload = false;
+            if (!IsOutdated) {
+                // The first autoload in this context. Let's check if this is the newest version.
+                Assembly selfAsm = Assembly.GetExecutingAssembly();
+                Version selfVer = selfAsm.GetName().Version;
+                List<Assembly> olderAsm = new List<Assembly>();
+                Assembly newestAsm = selfAsm;
+                Version newestVer = selfVer;
 
-            foreach (Assembly otherAsm in LoadedAssemblies.Values) {
-                if (otherAsm == selfAsm)
-                    continue;
-                if (!otherAsm.GetName().Name.StartsWith("TerrariaHooks"))
-                    continue;
-                // Check if the other TerrariaHooks is initialized.
-                if (false.Equals(otherAsm.GetType("TerrariaHooksContext").GetField("Initialized", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null)))
-                    continue;
+                foreach (Assembly otherAsm in LoadedAssemblies.Values) {
+                    if (otherAsm == selfAsm)
+                        continue;
+                    if (!otherAsm.GetName().Name.StartsWith("TerrariaHooks") &&
+                        !otherAsm.GetName().Name.Contains("_TerrariaHooks_"))
+                        continue;
+                    // Check if the other TerrariaHooks is initialized.
+                    if (false.Equals(otherAsm.GetType("TerrariaHooksContext").GetField("Initialized", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null)))
+                        continue;
 
-                // Check the other TerrariaHooks version.
-                Version otherVer = otherAsm.GetName().Version;
-                if (otherVer > newestVer) {
-                    // There's a newer copy of TerrariaHooks loaded.
-                    newestAsm = otherAsm;
-                    newestVer = otherVer;
-                } else if (otherVer <= selfVer) {
-                    // There's an older copy of TerrariaHooks loaded.
-                    olderAsm.Add(otherAsm);
+                    // Check the other TerrariaHooks version.
+                    Version otherVer = otherAsm.GetName().Version;
+                    if (otherVer > newestVer) {
+                        // There's a newer copy of TerrariaHooks loaded.
+                        newestAsm = otherAsm;
+                        newestVer = otherVer;
+                    } else {
+                        // There's an older copy of TerrariaHooks loaded.
+                        olderAsm.Add(otherAsm);
+                    }
                 }
-            }
 
-            if (newestAsm == selfAsm) {
-                // We're the newest version. Upgrade everything else.
-                object[] args = { selfAsm, OnLocalDetour, OnLocalUndo, OnLocalGenerateTrampoline };
-                foreach (Assembly otherAsm in olderAsm) {
-                    Type otherT = otherAsm.GetType("TerrariaHooksContext");
-                    otherT.GetMethod("Enslave", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
+                if (newestAsm == selfAsm) {
+                    // We're the newest version. Upgrade everything else.
+                    object[] args = {
+                    selfAsm,
+                    OnLocalDetour, OnLocalUndo, OnLocalGenerateTrampoline,
+                    OnLocalAdd, OnLocalRemove, OnLocalModify, OnLocalUnmodify, OnLocalRemoveAllOwnedBy
+                };
+                    foreach (Assembly otherAsm in olderAsm) {
+                        Type otherT = otherAsm.GetType("TerrariaHooksContext");
+                        otherT.GetMethod("Upgrade", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
+                    }
                 }
             }
         }
@@ -185,6 +229,7 @@ public static class TerrariaHooksContext {
     static void OnUnloadAll(Action orig) {
         orig();
 
+        // Dispose the context.
         Dispose();
     }
 
