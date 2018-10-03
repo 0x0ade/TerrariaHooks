@@ -62,17 +62,23 @@ If you want to use TerrariaHooks in your mod:
 
 ### Bundling TerrariaHooks
 
+**Note:** This isn't finished yet.  
+**TODO:**
+- "Backport" loader change in [tML PR #417](https://github.com/blushiemagic/tModLoader/pull/417) for tModLoader 0.10.1.5
+- Update compiler wrapper to take loader workaround into account.
+
 If you need to avoid dependencies and want to include TerrariaHooks with your mod, follow these additional instructions.
+
+**There may be dragons. Please use the simple instructions above and make your mod depend on TerrariaHooks.**  
+This is your final warning.
 
 **Note:** The copy of TerrariaHooks bundled with your mod will get outdated sooner or later.
 
 #### Preparing Terraria / tML
 
-You'll need to perform a few preparations.
-
 tModLoader only supports compiling mods against a fixed set of libraries. This means that both your `Windows.dll` and `Mono.dll` will use `TerrariaHooks.dll` for Windows.
 
-TerrariaHooks comes with a wrapper for tModLoader's `CompileMod` and `RoslynCompile` methods. When compiling your mod against `lib/SomeLibrary.dll`, it'll also check `lib/SomeLibrary.Windows.dll` and `lib/SomeLibrary.Mono.dll`
+TerrariaHooks backports the changes in [tML PR #417](https://github.com/blushiemagic/tModLoader/pull/417) in a roundabout way by hooking `CompileMod` and `RoslynCompile`.
 
 - Download the TerrariaHooks mod in the Terraria mod browser.
 - Download `tModLoaderServer_TerrariaHooks.exe` from the [latest release](https://github.com/0x0ade/TerrariaHooks/releases).
@@ -80,13 +86,16 @@ TerrariaHooks comes with a wrapper for tModLoader's `CompileMod` and `RoslynComp
 
 #### Preparing your mod
 
-- Change your `.csproj` to use `tModLoaderServer_TerrariaHooks.exe`
-- Download `TerrariaHooks.Mono.dll` from the [latest release](https://github.com/0x0ade/TerrariaHooks/releases).
-- Put it into your mod `lib` folder, next to `TerrariaHooks.dll`
-- In your `build.txt`, add the following:
-    - `dllReferences = TerrariaHooks` (`dll` instead of `mod`)
+The changes in [tML PR #417](https://github.com/blushiemagic/tModLoader/pull/417) also contains a loader-related change. Working around this issue is much more ugly:
+
+- Change your `.csproj` to use `tModLoaderServer_TerrariaHooks.exe`.
+- Download `TerrariaHooks.Mono.dll` and `TerrariaHooks.Boot.dll` from the [latest release](https://github.com/0x0ade/TerrariaHooks/releases).
+- Put both into your mod `lib` folder, next to `TerrariaHooks.dll`
+- Add `TerrariaHooks.Boot.dll` as a reference to your project in Visual Studio.
+- In your `build.txt`, remove the mod reference and add the following:
+    - `dllReferences = TerrariaHooks, TerrariaHooks.Boot`
     - `languageVersion = 6`
-- Run `TerrariaHooksContext.Init(this)` at the beginning of your mod constructor.
+- Run `TerrariaHooksBoot.Init(this)` at the beginning of your mod constructor.
 
 ## Building TerrariaHooks yourself
 

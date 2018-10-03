@@ -6,6 +6,7 @@ using MonoMod.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -14,32 +15,21 @@ using Terraria;
 using Terraria.ModLoader;
 using TerrariaHooks;
 
-public static class TerrariaHooksContext {
-
-    private static readonly FieldInfo f_AssemblyManager_loadedAssemblies =
-        typeof(Mod).Assembly
-        .GetType("Terraria.ModLoader.AssemblyManager")
-        .GetField("loadedAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
-    private static IDictionary<string, Assembly> LoadedAssemblies => f_AssemblyManager_loadedAssemblies.GetValue(null) as IDictionary<string, Assembly>;
-
-    static bool IsOutdated = false;
-    static Func<object, MethodBase, MethodBase, bool> OnRemoteDetour;
-    static Func<object, bool> OnRemoteUndo;
-    static Func<object, MethodBase, MethodBase> OnRemoteGenerateTrampoline;
-    static Func<MethodBase, Delegate, bool> OnRemoteAdd;
-    static Func<MethodBase, Delegate, bool> OnRemoteRemove;
-    static Func<MethodBase, Delegate, bool> OnRemoteModify;
-    static Func<MethodBase, Delegate, bool> OnRemoteUnmodify;
-    static Func<object, bool> OnRemoteRemoveAllOwnedBy;
+static partial class TerrariaHooksContext {
 
     static readonly HashSet<Mod> Mods = new HashSet<Mod>();
     static bool Initialized = false;
     static bool IsInstalled = false;
     static bool IsFirstAutoload = false;
 
+    static readonly Dictionary<Assembly, List<IDetour>> OwnedDetourLists = new Dictionary<Assembly, List<IDetour>>();
+
     public static void Init(Mod mod) {
         if (Mods.Contains(mod))
-            throw new InvalidOperationException("TerrariaHooksMini.Boot cannot run more than once per mod without unloading!");
+            throw new InvalidOperationException("TerrariaHooksContext.Init cannot run more than once per mod without unloading!");
+
+        if (mod is TerrariaHooksMod)
+            IsInstalled = true;
 
         if (Initialized)
             return;
@@ -47,14 +37,12 @@ public static class TerrariaHooksContext {
         IsFirstAutoload = true;
         IsOutdated = false;
 
-        if (mod is TerrariaHooksMod)
-            IsInstalled = true;
-
         // Load the cecil module generator.
         // Adding this more than once shouldn't hurt.
         HookEndpointManager.OnGenerateCecilModule += GenerateCecilModule;
 
         // We need to perform some magic to get all loaded copies of TerrariaHooks in sync.
+        // OnAutoload is located in .Upgrade.cs
         HookOnAutoload = new Hook(
             typeof(Mod).GetMethod("Autoload", BindingFlags.NonPublic | BindingFlags.Instance),
             typeof(TerrariaHooksContext).GetMethod("OnAutoload", BindingFlags.NonPublic | BindingFlags.Static)
@@ -71,14 +59,26 @@ public static class TerrariaHooksContext {
             typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static),
             typeof(TerrariaHooksContext).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
         );
+
+        // Keep track of all NativeDetours, Detours and (indirectly) Hooks.
+        Detour.OnDetour += RegisterDetour;
+        Detour.OnUndo += UnregisterDetour;
+        NativeDetour.OnDetour += RegisterNativeDetour;
+        NativeDetour.OnUndo += UnregisterDetour;
     }
 
     internal static void Dispose() {
         if (!Initialized)
             return;
         Initialized = false;
+        OwnedDetourLists.Clear();
 
         HookEndpointManager.OnGenerateCecilModule -= GenerateCecilModule;
+
+        Detour.OnDetour -= RegisterDetour;
+        Detour.OnUndo -= UnregisterDetour;
+        NativeDetour.OnDetour -= RegisterNativeDetour;
+        NativeDetour.OnUndo -= UnregisterDetour;
 
         HookOnAutoload.Dispose();
         HookOnUnloadContent.Dispose();
@@ -89,6 +89,9 @@ public static class TerrariaHooksContext {
             Detour.OnDetour -= OnRemoteDetour;
             Detour.OnUndo -= OnRemoteUndo;
             Detour.OnGenerateTrampoline -= OnRemoteGenerateTrampoline;
+            NativeDetour.OnDetour -= OnRemoteNativeDetour;
+            NativeDetour.OnUndo -= OnRemoteNativeUndo;
+            NativeDetour.OnGenerateTrampoline -= OnRemoteNativeGenerateTrampoline;
             HookEndpointManager.OnAdd -= OnRemoteAdd;
             HookEndpointManager.OnRemove -= OnRemoteRemove;
             HookEndpointManager.OnModify -= OnRemoteModify;
@@ -96,133 +99,18 @@ public static class TerrariaHooksContext {
             HookEndpointManager.OnRemoveAllOwnedBy -= OnRemoteRemoveAllOwnedBy;
         }
     }
-
-    static void Upgrade(
-        Assembly newestAsm,
-        Func<object, MethodBase, MethodBase, bool> onRemoteDetour,
-        Func<object, bool> onRemoteUndo,
-        Func<object, MethodBase, MethodBase> onRemoteGenerateTrampoline,
-        Func<MethodBase, Delegate, bool> onRemoteAdd,
-        Func<MethodBase, Delegate, bool> onRemoteRemove,
-        Func<MethodBase, Delegate, bool> onRemoteModify,
-        Func<MethodBase, Delegate, bool> onRemoteUnmodify,
-        Func<object, bool> onRemoteRemoveAllOwnedBy
-    ) {
-        Assembly selfAsm = Assembly.GetExecutingAssembly();
-        IsOutdated = true;
-
-        if (IsInstalled) {
-            Console.WriteLine("The installed version of TerrariaHooks might be conflicting with a version bundled in another mod.");
-        } else {
-            Console.WriteLine("The following mods are using an outdated / conflicting version of TerrariaHooks:");
-            foreach (Mod mod in Mods)
-                Console.WriteLine(mod.Name);
-        }
-
-        Console.WriteLine($"Upgrading this context from {selfAsm.GetName().Version} to {newestAsm.GetName().Version}");
-
-        Detour.OnDetour += OnRemoteDetour = onRemoteDetour;
-        Detour.OnUndo += OnRemoteUndo = onRemoteUndo;
-        Detour.OnGenerateTrampoline += OnRemoteGenerateTrampoline = onRemoteGenerateTrampoline;
-        HookEndpointManager.OnAdd += OnRemoteAdd = onRemoteAdd;
-        HookEndpointManager.OnRemove += OnRemoteRemove = onRemoteRemove;
-        HookEndpointManager.OnModify += OnRemoteModify = onRemoteModify;
-        HookEndpointManager.OnUnmodify += OnRemoteUnmodify = onRemoteUnmodify;
-        HookEndpointManager.OnRemoveAllOwnedBy += OnRemoteRemoveAllOwnedBy = onRemoteRemoveAllOwnedBy;
-    }
-
-    static readonly Dictionary<object, Detour> RemoteDetours = new Dictionary<object, Detour>();
-    static readonly Func<object, MethodBase, MethodBase, bool> OnLocalDetour = (remote, from, to) => {
-        RemoteDetours[remote] = new Detour(from, to);
-        return false;
-    };
-    static readonly Func<object, bool> OnLocalUndo = (remote) => {
-        RemoteDetours[remote].Undo();
-        RemoteDetours.Remove(remote);
-        return false;
-    };
-    static readonly Func<object, MethodBase, MethodBase> OnLocalGenerateTrampoline = (remote, signature) => {
-        return RemoteDetours[remote].GenerateTrampoline(signature);
-    };
-    static readonly Func<MethodBase, Delegate, bool> OnLocalAdd = (method, hookDelegate) => {
-        HookEndpointManager.Add(method, hookDelegate);
-        return false;
-    };
-    static readonly Func<MethodBase, Delegate, bool> OnLocalRemove = (method, hookDelegate) => {
-        HookEndpointManager.Remove(method, hookDelegate);
-        return false;
-    };
-    static readonly Func<MethodBase, Delegate, bool> OnLocalModify = (method, callback) => {
-        HookEndpointManager.Modify(method, callback);
-        return false;
-    };
-    static readonly Func<MethodBase, Delegate, bool> OnLocalUnmodify = (method, callback) => {
-        HookEndpointManager.Unmodify(method, callback);
-        return false;
-    };
-    static readonly Func<object, bool> OnLocalRemoveAllOwnedBy = (owner) => {
-        HookEndpointManager.RemoveAllOwnedBy(owner);
-        return false;
-    };
-
-    static Hook HookOnAutoload;
-    static void OnAutoload(Action<Mod> orig, Mod mod) {
-        if (IsFirstAutoload) {
-            IsFirstAutoload = false;
-            if (!IsOutdated) {
-                // The first autoload in this context. Let's check if this is the newest version.
-                Assembly selfAsm = Assembly.GetExecutingAssembly();
-                Version selfVer = selfAsm.GetName().Version;
-                List<Assembly> olderAsm = new List<Assembly>();
-                Assembly newestAsm = selfAsm;
-                Version newestVer = selfVer;
-
-                foreach (Assembly otherAsm in LoadedAssemblies.Values) {
-                    if (otherAsm == selfAsm)
-                        continue;
-                    if (!otherAsm.GetName().Name.StartsWith("TerrariaHooks") &&
-                        !otherAsm.GetName().Name.Contains("_TerrariaHooks_"))
-                        continue;
-                    // Check if the other TerrariaHooks is initialized.
-                    if (false.Equals(otherAsm.GetType("TerrariaHooksContext").GetField("Initialized", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null)))
-                        continue;
-
-                    // Check the other TerrariaHooks version.
-                    Version otherVer = otherAsm.GetName().Version;
-                    if (otherVer > newestVer) {
-                        // There's a newer copy of TerrariaHooks loaded.
-                        newestAsm = otherAsm;
-                        newestVer = otherVer;
-                    } else {
-                        // There's an older copy of TerrariaHooks loaded.
-                        olderAsm.Add(otherAsm);
-                    }
-                }
-
-                if (newestAsm == selfAsm) {
-                    // We're the newest version. Upgrade everything else.
-                    object[] args = {
-                    selfAsm,
-                    OnLocalDetour, OnLocalUndo, OnLocalGenerateTrampoline,
-                    OnLocalAdd, OnLocalRemove, OnLocalModify, OnLocalUnmodify, OnLocalRemoveAllOwnedBy
-                };
-                    foreach (Assembly otherAsm in olderAsm) {
-                        Type otherT = otherAsm.GetType("TerrariaHooksContext");
-                        otherT.GetMethod("Upgrade", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
-                    }
-                }
-            }
-        }
-
-        orig(mod);
-    }
-
+    
     static Hook HookOnUnloadContent;
     static void OnUnloadContent(Action<Mod> orig, Mod mod) {
         orig(mod);
 
         // Unload any HookGen hooks after unloading the mod.
         HookEndpointManager.RemoveAllOwnedBy(mod.Code);
+        if (OwnedDetourLists.TryGetValue(mod.Code, out List<IDetour> list)) {
+            OwnedDetourLists.Remove(mod.Code);
+            foreach (IDetour detour in list)
+                detour.Dispose();
+        }
     }
 
     static Hook HookOnUnloadAll;
@@ -231,6 +119,43 @@ public static class TerrariaHooksContext {
 
         // Dispose the context.
         Dispose();
+    }
+
+    internal static List<IDetour> GetOwnedDetourList(bool add = true) {
+        // Find .ctor call on stack. Whatever called that is the detour's owner.
+        StackTrace stack = new StackTrace(0);
+        Assembly owner = null;
+        int frameCount = stack.FrameCount;
+        for (int i = 0; i < frameCount - 1; i++) {
+            StackFrame frame = stack.GetFrame(i);
+            MethodBase caller = frame.GetMethod();
+            if (caller == null || !caller.IsConstructor)
+                continue;
+            owner = stack.GetFrame(i + 1).GetMethod()?.DeclaringType?.Assembly;
+            break;
+        }
+
+        if (owner == null)
+            return null;
+
+        if (!OwnedDetourLists.TryGetValue(owner, out List<IDetour> list) && add)
+            OwnedDetourLists[owner] = list = new List<IDetour>();
+        return list;
+    }
+
+    internal static bool RegisterDetour(object _detour, MethodBase from, MethodBase to) {
+        GetOwnedDetourList()?.Add(_detour as IDetour);
+        return true;
+    }
+
+    internal static bool RegisterNativeDetour(object _detour, MethodBase method, IntPtr from, IntPtr to) {
+        GetOwnedDetourList()?.Add(_detour as IDetour);
+        return true;
+    }
+
+    internal static bool UnregisterDetour(object _detour) {
+        GetOwnedDetourList(false)?.Remove(_detour as IDetour);
+        return true;
     }
 
     internal static ModuleDefinition GenerateCecilModule(AssemblyName name) {

@@ -21,6 +21,7 @@ namespace TerrariaHooks {
 
             Properties = new ModProperties() {
             };
+
         }
 
     }
