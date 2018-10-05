@@ -104,6 +104,9 @@ static partial class TerrariaHooksContext {
     static void OnUnloadContent(Action<Mod> orig, Mod mod) {
         orig(mod);
 
+        if (mod.Code == null)
+            return;
+
         // Unload any HookGen hooks after unloading the mod.
         HookEndpointManager.RemoveAllOwnedBy(mod.Code);
         if (OwnedDetourLists.TryGetValue(mod.Code, out List<IDetour> list)) {
@@ -122,16 +125,35 @@ static partial class TerrariaHooksContext {
     }
 
     internal static List<IDetour> GetOwnedDetourList(bool add = true) {
-        // Find .ctor call on stack. Whatever called that is the detour's owner.
-        StackTrace stack = new StackTrace(0);
+        // I deserve to be murdered for this.
+        StackTrace stack = new StackTrace();
         Assembly owner = null;
         int frameCount = stack.FrameCount;
+        int state = 0;
         for (int i = 0; i < frameCount - 1; i++) {
             StackFrame frame = stack.GetFrame(i);
             MethodBase caller = frame.GetMethod();
-            if (caller == null || !caller.IsConstructor)
+            if (caller == null)
                 continue;
-            owner = stack.GetFrame(i + 1).GetMethod()?.DeclaringType?.Assembly;
+            switch (state) {
+                // Skip until we've reached a method in Detour or Hook.
+                case 0:
+                    if (caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Detour" &&
+                        caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Hook") {
+                        continue;
+                    }
+                    state++;
+                    continue;
+
+                // Skip until we're out of Detour and / or Hook.
+                case 1:
+                    if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
+                        caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Hook") {
+                        continue;
+                    }
+                    owner = caller?.DeclaringType?.Assembly;
+                    break;
+            }
             break;
         }
 
