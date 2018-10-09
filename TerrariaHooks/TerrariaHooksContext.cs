@@ -124,13 +124,14 @@ static partial class TerrariaHooksContext {
         Dispose();
     }
 
-    internal static List<IDetour> GetOwnedDetourList(bool add = true) {
+    internal static List<IDetour> GetOwnedDetourList(StackTrace stack = null, bool add = true) {
         // I deserve to be murdered for this.
-        StackTrace stack = new StackTrace();
+        if (stack == null)
+            stack = new StackTrace();
         Assembly owner = null;
         int frameCount = stack.FrameCount;
         int state = 0;
-        for (int i = 0; i < frameCount - 1; i++) {
+        for (int i = 0; i < frameCount; i++) {
             StackFrame frame = stack.GetFrame(i);
             MethodBase caller = frame.GetMethod();
             if (caller == null)
@@ -138,7 +139,8 @@ static partial class TerrariaHooksContext {
             switch (state) {
                 // Skip until we've reached a method in Detour or Hook.
                 case 0:
-                    if (caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Detour" &&
+                    if (caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.NativeDetour" &&
+                        caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Detour" &&
                         caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Hook") {
                         continue;
                     }
@@ -147,7 +149,8 @@ static partial class TerrariaHooksContext {
 
                 // Skip until we're out of Detour and / or Hook.
                 case 1:
-                    if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
+                    if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.NativeDetour" ||
+                        caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
                         caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Hook") {
                         continue;
                     }
@@ -171,12 +174,26 @@ static partial class TerrariaHooksContext {
     }
 
     internal static bool RegisterNativeDetour(object _detour, MethodBase method, IntPtr from, IntPtr to) {
-        GetOwnedDetourList()?.Add(_detour as IDetour);
+        StackTrace stack = new StackTrace();
+
+        // Don't register NativeDetours created by higher level Detours.
+        int frameCount = stack.FrameCount;
+        for (int i = 0; i < frameCount; i++) {
+            StackFrame frame = stack.GetFrame(i);
+            MethodBase caller = frame.GetMethod();
+            if (caller == null)
+                continue;
+            if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
+                caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Hook")
+                return true;
+        }
+
+        GetOwnedDetourList(stack: stack)?.Add(_detour as IDetour);
         return true;
     }
 
     internal static bool UnregisterDetour(object _detour) {
-        GetOwnedDetourList(false)?.Remove(_detour as IDetour);
+        GetOwnedDetourList(add: false)?.Remove(_detour as IDetour);
         return true;
     }
 
