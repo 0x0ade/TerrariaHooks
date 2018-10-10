@@ -19,8 +19,6 @@ static partial class TerrariaHooksContext {
 
     static readonly HashSet<Mod> Mods = new HashSet<Mod>();
     static bool Initialized = false;
-    static bool IsInstalled = false;
-    static bool IsFirstAutoload = false;
 
     static readonly Dictionary<Assembly, List<IDetour>> OwnedDetourLists = new Dictionary<Assembly, List<IDetour>>();
 
@@ -28,25 +26,13 @@ static partial class TerrariaHooksContext {
         if (Mods.Contains(mod))
             throw new InvalidOperationException("TerrariaHooksContext.Init cannot run more than once per mod without unloading!");
 
-        if (mod is TerrariaHooksMod)
-            IsInstalled = true;
-
         if (Initialized)
             return;
         Initialized = true;
-        IsFirstAutoload = true;
-        IsOutdated = false;
 
         // Load the cecil module generator.
         // Adding this more than once shouldn't hurt.
         HookEndpointManager.OnGenerateCecilModule += GenerateCecilModule;
-
-        // We need to perform some magic to get all loaded copies of TerrariaHooks in sync.
-        // OnAutoload is located in .Upgrade.cs
-        HookOnAutoload = new Hook(
-            typeof(Mod).GetMethod("Autoload", BindingFlags.NonPublic | BindingFlags.Instance),
-            typeof(TerrariaHooksContext).GetMethod("OnAutoload", BindingFlags.NonPublic | BindingFlags.Static)
-        );
 
         // Some mods might forget to undo their hooks.
         HookOnUnloadContent = new Hook(
@@ -71,6 +57,7 @@ static partial class TerrariaHooksContext {
         if (!Initialized)
             return;
         Initialized = false;
+        Mods.Clear();
         OwnedDetourLists.Clear();
 
         HookEndpointManager.OnGenerateCecilModule -= GenerateCecilModule;
@@ -80,31 +67,15 @@ static partial class TerrariaHooksContext {
         NativeDetour.OnDetour -= RegisterNativeDetour;
         NativeDetour.OnUndo -= UnregisterDetour;
 
-        HookOnAutoload.Dispose();
         HookOnUnloadContent.Dispose();
         HookOnUnloadAll.Dispose();
-
-        if (IsOutdated) {
-            IsOutdated = false;
-            Detour.OnDetour -= OnRemoteDetour;
-            Detour.OnUndo -= OnRemoteUndo;
-            Detour.OnGenerateTrampoline -= OnRemoteGenerateTrampoline;
-            NativeDetour.OnDetour -= OnRemoteNativeDetour;
-            NativeDetour.OnUndo -= OnRemoteNativeUndo;
-            NativeDetour.OnGenerateTrampoline -= OnRemoteNativeGenerateTrampoline;
-            HookEndpointManager.OnAdd -= OnRemoteAdd;
-            HookEndpointManager.OnRemove -= OnRemoteRemove;
-            HookEndpointManager.OnModify -= OnRemoteModify;
-            HookEndpointManager.OnUnmodify -= OnRemoteUnmodify;
-            HookEndpointManager.OnRemoveAllOwnedBy -= OnRemoteRemoveAllOwnedBy;
-        }
     }
     
     static Hook HookOnUnloadContent;
     static void OnUnloadContent(Action<Mod> orig, Mod mod) {
         orig(mod);
 
-        if (mod.Code == null)
+        if (mod.Code == null || mod is TerrariaHooksMod)
             return;
 
         // Unload any HookGen hooks after unloading the mod.
@@ -134,14 +105,14 @@ static partial class TerrariaHooksContext {
         for (int i = 0; i < frameCount; i++) {
             StackFrame frame = stack.GetFrame(i);
             MethodBase caller = frame.GetMethod();
-            if (caller == null)
+            if (caller?.DeclaringType == null)
                 continue;
             switch (state) {
                 // Skip until we've reached a method in Detour or Hook.
                 case 0:
-                    if (caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.NativeDetour" &&
-                        caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Detour" &&
-                        caller.DeclaringType?.FullName != "MonoMod.RuntimeDetour.Hook") {
+                    if (caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.NativeDetour" &&
+                        caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.Detour" &&
+                        caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.Hook") {
                         continue;
                     }
                     state++;
@@ -149,12 +120,12 @@ static partial class TerrariaHooksContext {
 
                 // Skip until we're out of Detour and / or Hook.
                 case 1:
-                    if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.NativeDetour" ||
-                        caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
-                        caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Hook") {
+                    if (caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.NativeDetour" ||
+                        caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Detour" ||
+                        caller.DeclaringType.FullName == "MonoMod.RuntimeDetour.Hook") {
                         continue;
                     }
-                    owner = caller?.DeclaringType?.Assembly;
+                    owner = caller?.DeclaringType.Assembly;
                     break;
             }
             break;
@@ -181,10 +152,10 @@ static partial class TerrariaHooksContext {
         for (int i = 0; i < frameCount; i++) {
             StackFrame frame = stack.GetFrame(i);
             MethodBase caller = frame.GetMethod();
-            if (caller == null)
+            if (caller?.DeclaringType == null)
                 continue;
-            if (caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Detour" ||
-                caller.DeclaringType?.FullName == "MonoMod.RuntimeDetour.Hook")
+            if (caller.DeclaringType.FullName.StartsWith("MonoMod.RuntimeDetour.") &&
+                caller.DeclaringType.FullName != "MonoMod.RuntimeDetour.NativeDetour")
                 return true;
         }
 
