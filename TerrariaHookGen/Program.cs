@@ -62,11 +62,6 @@ namespace TerrariaHookGen {
             File.Delete(hooksXNA);
             Repack(hooksFNA, extrasMod, Path.Combine(outputDir, "Mono.dll"), "TerrariaHooks.dll");
             File.Delete(hooksFNA);
-
-            Repack("tModLoaderServer_TerrariaHooks.exe", new string[] {
-                "MonoMod.RuntimeDetour.dll",
-                "MonoMod.Utils.dll"
-            }, Path.Combine(outputDir, "tModLoaderServer_TerrariaHooks.exe"));
         }
 
         static bool VerifyFile(out string path, params string[] paths) {
