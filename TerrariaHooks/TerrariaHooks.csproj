@@ -41,9 +41,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ModCompilerHook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TerrariaHooksContext.cs" />
+    <Compile Include="TerrariaHooksManager.cs" />
     <Compile Include="TerrariaHooksMod.cs" />
   </ItemGroup>
   <ItemGroup>

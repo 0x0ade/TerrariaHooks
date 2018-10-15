@@ -16,12 +16,10 @@ namespace TerrariaHooks {
     class TerrariaHooksMod : Mod {
 
         public TerrariaHooksMod() {
-            TerrariaHooksContext.Init(this);
-            ModCompilerHook.Init(typeof(Mod).Assembly);
+            TerrariaHooksManager.Init();
 
             Properties = new ModProperties() {
             };
-
         }
 
     }
