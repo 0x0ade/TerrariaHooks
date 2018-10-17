@@ -70,6 +70,7 @@ namespace TerrariaHooks {
 
             HookOnUnloadContent.Dispose();
             HookOnUnloadAll.Dispose();
+            HookOnLogSilentException?.Dispose();
         }
 
         static Hook HookOnUnloadContent;
