@@ -15,7 +15,7 @@ namespace TerrariaHookGen {
     class Program {
 
         static void Main(string[] args) {
-            // Required for the relative paths in extras.dll to work properly.
+            // Required for the relative extra paths to work properly.
             if (!File.Exists("MonoMod.RuntimeDetour.dll"))
                 Environment.CurrentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 

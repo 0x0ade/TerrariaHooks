@@ -1,17 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="15.0">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{0DDC1049-13AB-463D-91A9-EF4E56BFF5AF}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TerrariaHooks</RootNamespace>
     <AssemblyName>TerrariaHooks</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
+    <TargetFramework>net452</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,8 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Newtonsoft.Json">
       <HintPath>..\_input\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -41,24 +40,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TerrariaHooksManager.cs" />
-    <Compile Include="TerrariaHooksMod.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MonoMod\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj">
-      <Project>{d0c584c0-81d7-486e-b70e-d7f9256e0909}</Project>
-      <Name>MonoMod.RuntimeDetour</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoMod\MonoMod.Utils\MonoMod.Utils.csproj">
-      <Project>{1839cfe2-3db0-45a8-b03d-9aa797479a3a}</Project>
-      <Name>MonoMod.Utils</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\MonoMod\MonoMod.RuntimeDetour\MonoMod.RuntimeDetour.csproj" AdditionalProperties="CecilLegacy=true" />
+    <ProjectReference Include="..\MonoMod\MonoMod.Utils\MonoMod.Utils.csproj" AdditionalProperties="CecilLegacy=true" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil">
       <Version>0.9.6</Version>
     </PackageReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
