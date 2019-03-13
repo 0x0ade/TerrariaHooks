@@ -43,7 +43,9 @@ namespace TerrariaHooks {
 
             // All of our own hooks need to be undone last.
             HookOnUnloadAll = new Hook(
-                typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static),
+                typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static) ??
+                // tML x64 is a hot mess of tML 0.10 and 0.11 pre-beta.
+                typeof(ModLoader).GetMethod("UnloadContent", BindingFlags.NonPublic | BindingFlags.Static),
                 typeof(TerrariaHooksManager).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
             );
 
