@@ -42,12 +42,30 @@ namespace TerrariaHooks {
             );
 
             // All of our own hooks need to be undone last.
-            HookOnUnloadAll = new Hook(
-                typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static) ??
-                // tML x64 is a hot mess of tML 0.10 and 0.11 pre-beta.
-                typeof(ModLoader).GetMethod("UnloadContent", BindingFlags.NonPublic | BindingFlags.Static),
-                typeof(TerrariaHooksManager).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
-            );
+            MethodBase m_Unload = typeof(ModLoader).GetMethod("Unload", BindingFlags.NonPublic | BindingFlags.Static);
+            if (m_Unload != null) {
+                HookOnUnloadAll = new Hook(
+                    m_Unload,
+                    typeof(TerrariaHooksManager).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
+                );
+            } else {
+                /* The unofficial tML x64 form is a hot mess of tML 0.10 and 0.11 pre-beta.
+                 * As such, mods are only unloaded when they're reloaded.
+                 * Luckily, ModContnet.Unload runs right after unloading all mods.
+                 * Even more luckily, it pretty much shares the same signature as the old Unload method.
+                 */
+                MethodBase m_UnloadContent =
+                    typeof(Mod).Assembly.GetType("Terraria.ModLoader.ModContent")
+                    ?.GetMethod("Unload", BindingFlags.Public  | BindingFlags.NonPublic | BindingFlags.Static);
+                if (m_UnloadContent != null) {
+                    HookOnUnloadAll = new Hook(
+                        m_UnloadContent,
+                        typeof(TerrariaHooksManager).GetMethod("OnUnloadAll", BindingFlags.NonPublic | BindingFlags.Static)
+                    );
+                } else {
+                    throw new Exception("Incompatible tML version: Can't find unload hook point");
+                }
+            }
 
             // Try to hook the logger to avoid logging "silent" exceptions thrown by TerrariaHooks.
             MethodBase m_LogSilentException =
