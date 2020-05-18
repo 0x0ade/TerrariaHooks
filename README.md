@@ -1,3 +1,7 @@
+# OBSOLETE
+### tModLoader 0.11+ includes its own version of TerrariaHooks / MonoMod.
+Please tell any mod developers which still use this old version to update their mods.
+
 # TerrariaHooks
 
 ### License: MIT
